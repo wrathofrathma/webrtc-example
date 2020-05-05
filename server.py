@@ -1,25 +1,21 @@
 import asyncio
+import json
+import pathlib
+import pickle
+import ssl
+from uuid import uuid4
+
 import uvloop
 import websockets
-from uuid import uuid4
-import pickle
-import json
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
-from copy import deepcopy
 from sanic import Sanic
-from sanic.response import file, text, redirect
+from sanic.response import file
 from sanic.response import json as r_json
-from sanic.websocket import WebSocketProtocol, ConnectionClosed
-import pathlib
-import ssl
+from sanic.response import redirect, text
+
+from rtc import *
 
 # Peers connected to the main index
 index_peers = {}
-
-# Peers connected to the webrtc area
-peers = {}
-rooms = {}
-room_names = {}
 
 async def push_room_update():
     """Pushes the updated room list info to all users on the index.
@@ -28,76 +24,47 @@ async def push_room_update():
         await send_rooms(ws)
 
 async def send_rooms(ws):
+    """Pushes updated room list to a specific user
+    """
     payload = { "method": "room_update", "rooms": rooms }
     await ws.send(json.dumps(payload))
 
-
-
 def create_room(params, rid=None):
+    """Creates a chat room given some parameters
+    """
     print(params)
     if(rid is None):
         room_id = str(uuid4())
     else:
         room_id = rid
     rooms[room_id] = {}
-    print(params["room_name"])
-    print(params["room_name"][0])
     url = "https://webrtc.kyso.dev/room/" + room_id
     room_names[params["room_name"][0]] = room_id
     rooms[room_id]["uuid"] = room_id
     rooms[room_id]["name"] = params["room_name"]
     rooms[room_id]["url"] = url
-    rooms[room_id]["capacity"] = params["participants"]
+    rooms[room_id]["capacity"] = int(params["participants"][0])
     rooms[room_id]["users"] = []
     rooms[room_id]["chat"] = []
-    rooms[room_id]["avail"] = params["participants"]
+    rooms[room_id]["avail"] = int(params["participants"][0])
     rooms[room_id]["user_count"] = 0
     print("Created room %s" % str(rooms[room_id]))
     asyncio.ensure_future(push_room_update())
     return url
 
-async def on_disconnect(user):
-    print("Connection closed - removing user")
-    peers.pop(user)
-    for room in rooms:
-        if user in room["users"]:
-            room["users"].pop(user)
-
-
-async def peer_listener(user, socket):
-    """Websocket peer listener"""
-    while(socket.open):
-        try:
-            recv = json.loads(await socket.recv())
-        except ConnectionClosed:
-            on_disconnect(user)
-            return
-
-        # Pretty much no matter what, we're just going to swap uuids and copy it to the other user
-        req = deepcopy(recv)
-        if(req["method"]=="ready"):
-            continue
-        req["uuid"] = user
-        await peers[recv["uuid"]]["socket"].send(json.dumps(req))
-
-def get_other_peer(uid):
-    """Simple utility method to grab the uuid & socket of the other user.
-    Basically a stand-in for username routing.
-
-    Just returns the first user id that doesn't match the user.
-    """
-    for key in peers.keys():
-        if(key!=uid):
-            return key
 
 app = Sanic("WebRTC Example")
 async def on_index_disconnect(user):
+    """When a user disconnects from the index
+    """
     index_peers.pop(user)
     await update_connected_index()
 
 async def update_connected_index():
+    """Updates the connected count on the index
+    """
     for k,ws in index_peers.items():
-        await ws.send(json.dumps({"method": "connected_update", "connected": len(index_peers)}))
+        await ws.send(json.dumps({"method": "connected_update", "connected": len(index_peers) + len(rtc_peers)}))
 
 
 @app.websocket('/index')
@@ -114,29 +81,39 @@ async def ws_index(request, websocket):
             await on_index_disconnect(user)
 
 
-    
-
 @app.websocket('/rtc')
 async def ws_rtc(request, websocket):
-    pass
-
-@app.websocket('/sock')
-async def on_connect(request, websocket):
-    """This method is run when the users connect to the websocket server. It adds them to the connected dictionary & starts their event loop"""
     user = str(uuid4())
-    print("Peer connected {:s}".format(str(user)))
-    peers[user] = {"socket": websocket}
+    rtc_peers[user] = {"socket": websocket,
+                        "uuid": user,
+                        "username": user}
+    recv = await websocket.recv() # First response is the uuid of the room they join
 
-    recv = await websocket.recv() # Initial ready check
-    # Send the user their ID
-    await websocket.send(json.dumps({"uuid": user, "method": "id", "connected": len(peers)}))
+    rooms[recv]["user_count"]+=1
+    rooms[recv]["avail"]-=1
 
-    if(len(peers)==2):
-        # If two peers are connected, then let's tell the second peer to initiate contact
-        req = { "uuid": get_other_peer(user), "method": "init"}
-        await websocket.send(json.dumps(req))
+    await update_connected_index()
+    await push_room_update()
+    asyncio.ensure_future(rtc_handler(user, websocket))
 
-    await asyncio.ensure_future(peer_listener(user, websocket))
+
+# @app.websocket('/sock')
+# async def on_connect(request, websocket):
+#     """This method is run when the users connect to the websocket server. It adds them to the connected dictionary & starts their event loop"""
+#     user = str(uuid4())
+#     print("Peer connected {:s}".format(str(user)))
+#     peers[user] = {"socket": websocket}
+
+#     recv = await websocket.recv() # Initial ready check
+#     # Send the user their ID
+#     await websocket.send(json.dumps({"uuid": user, "method": "id", "connected": len(rtc_peers)}))
+
+#     if(len(rtc_peers)==2):
+#         # If two peers are connected, then let's tell the second peer to initiate contact
+#         req = { "uuid": get_other_peer(user), "method": "init"}
+#         await websocket.send(json.dumps(req))
+
+#     await asyncio.ensure_future(peer_listener(user, websocket))
 
 
 @app.route('/getroom/<key>')
@@ -144,13 +121,10 @@ async def get_room_data(request, key):
     print("Requested room data for %s" % str(key))
     if(key not in room_names.keys()):
         return r_json({})
-    _id = room_names[key]
-    room_data = {
-        "name": rooms[_id]["name"],
-        "uuid": _id
-    }
 
+    room_data = rooms[key]
     return r_json(room_data)
+
 # This allows us to share a link of a room we created
 @app.route('/room/<key>')
 async def serve_room(request, key):
@@ -164,8 +138,6 @@ async def serve_room(request, key):
 # This is the method called from the index to create a room
 @app.route('/room', methods=["POST"])
 async def serve_create_room(request):
-    print("Serving room")
-    print(request.form)
     room_data = request.form
     url = create_room(room_data)
     return redirect(url)

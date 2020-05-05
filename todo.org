@@ -15,11 +15,14 @@ CLOSED: [2020-05-04 Mon 18:02]
 CLOSED: [2020-05-04 Mon 18:02]
 *** [X] Connect to websockets
 CLOSED: [2020-05-04 Mon 18:47]
-** TODO Room Page
+** DONE Room Page
+CLOSED: [2020-05-04 Mon 23:08]
 ** TODO Websocket Chat
 ** TODO 2<user webcamming
-** TODO Audio
-** TODO Selectively mute&turn off camera
+** DONE Audio
+CLOSED: [2020-05-04 Mon 23:08]
+** DONE Selectively mute&turn off camera
+CLOSED: [2020-05-04 Mon 23:08]
 ** TODO Session Description Viewing
 ** TODO Live transmission stats
 ** DONE Random room

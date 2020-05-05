@@ -1,0 +1,180 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>WebRTC Example by HPV</title>
+        <meta name="description" content="WebRTC Example by HPV">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://webrtc.kyso.dev/style.css">
+        <link rel="stylesheet" href="https://jenil.github.io/bulmaswatch/darkly/bulmaswatch.min.css">
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="columns">
+                <div class="column">
+                    <div class="title has-text-centered">
+                        WebRTC Test Platform
+                    </div>
+                    <div class="subtitle has-text-centered">
+                        By HPV
+                    </div>
+                </div>
+            </div>
+
+            <!-- <button class="button is-primary" id="testbtn" onclick="mutebtn()">Mute</button> -->
+            <div id="voip-container" height="100%">
+              <div class="columns">
+                  <div class="column">
+                    <div class="card">
+                        <div class="columns">
+                            <div class="column">
+                                <div class="subtitle has-text-centered" id="username">
+                                    User 1
+                                </div>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <video autoplay="true" width="100%" id="user-webcam"></video>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <button class="button is-primary" id="mute">Mute</button>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div class="column is-hidden" id="user2-container">
+                    <div class="card">
+                        <div class="columns">
+                            <div class="column">
+                                <div class="subtitle has-text-centered" id="user2-username">
+                                    User 2
+                                </div>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <video autoplay="true" width="100%" id="user2-webcam"></video>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <button class="button is-primary" id="mute2">Mute</button>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+              </div>
+              <div class="columns">
+                  <div class="column is-hidden" id="user3-container">
+                    <div class="card">
+                        <div class="columns">
+                            <div class="column">
+                                <div class="subtitle has-text-centered" id="user3-username">
+                                    User 3
+                                </div>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <video autoplay="true" width="100%" id="user3-webcam"></video>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <button class="button is-primary" id="mute3">Mute</button>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div class="column is-hidden" id="user4-container">
+                    <div class="card">
+                        <div class="columns">
+                            <div class="column">
+                                <div class="subtitle has-text-centered" id="user4-username">
+                                    User 4
+                                </div>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <video autoplay="true" width="100%" id="user4-webcam"></video>
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <button class="button is-primary" id="mute4">Mute</button>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <div class="card">
+                        <div class="columns">
+                            <div class="column has-text-centered subtitle">
+                               Chat
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column" id="messages" style="overflow-y: scroll;margin-bottom:15px;overflow-x:hidden;flex-direction:column;height:300px;">
+                            </div>
+                        </div>
+                        <div class=columns>
+                            <div class="column">
+                                <input class="input is-primary" id="text-input" placeholder="Type a message...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr>
+
+
+        </div>
+            <footer class="footer is-fixed-bottom">
+                <div class="content has-text-centered">
+                    <p>
+                        This WebRTC test example brought to you by <strong>Team HPV</strong>
+                    </p>
+                </div>
+            </footer>
+
+            <!-- <script src="https://webrtc.kyso.dev/index.js"></script> -->
+        <!-- Old room code
+             <div class="container">
+             <div class="grid-item">
+             <div class="user-container">
+             <div id="user1-name">
+             <p>User1</p>
+             </div>
+             <video autoplay="true" id="user1-webcam">
+             </video>
+             </div>
+             </div>
+             <div class="grid-item">
+             <div class="user-container">
+             <div id="user2-name">
+             <p>User2</p>
+             </div>
+             <video autoplay="true" id="user2-webcam">
+             </video>
+             </div>
+             </div>
+
+             </div>
+             </div> -->
+
+
+
+        <script src="https://webrtc.kyso.dev/webrtc.js"></script>
+    </body>
+</html>
