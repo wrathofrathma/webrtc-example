@@ -55,7 +55,7 @@
             <!--Create a new room form-->
             <div class="columns">
                 <div class="column">
-                    <form class="box" id="submit" action="/room" method="post">
+                    <form class="box" id="submit" onsubmit="return validate_room()" action="/room" method="post">
                         <div class="field is-grouped">
                             <div class="control is-expanded">
                                 <input class="input is-primary" name="room_name" type="text" value="Submit" id="create_text" placeholder="Create a room">

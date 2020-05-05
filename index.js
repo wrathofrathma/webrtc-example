@@ -11,6 +11,14 @@ function join_random(){
     window.location.assign("https://webrtc.kyso.dev/rand")
 }
 
+
+//If there is no text, then we defer the submission to attempt_join
+function validate_room(){
+    if(create_text.value===""){
+        return false;
+    }
+}
+
 function attempt_join(){
     var xhttp = new XMLHttpRequest();
     xhttp.onload = () => {

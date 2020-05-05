@@ -92,6 +92,11 @@ async def on_disconnect(user):
             room["user_count"]-=1
             if(room["user_count"]==0):
                 to_rm.append(key)
+            for u in room["users"]:
+                await rtc_peers[u]["socket"].send(json.dumps({
+                    "method": "peer_disconnect",
+                    "uuid": user
+                }))
     for r in to_rm:
         rooms.pop(r)
     print(rooms)

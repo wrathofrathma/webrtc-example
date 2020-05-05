@@ -29,12 +29,12 @@ const ice_config = {
     iceServers: [
         {
             urls: ['stun:stun.l.google.com:19302']
-        }
-    //     {
-    //         urls: ['turn:3.23.105.166:3478'],
-    //         credential: 'hpv',
-    //         username: 'rathma'
-    // }
+        },
+        {
+            urls: ['turn:3.23.105.166:3478'],
+            credential: 'hpv',
+            username: 'rathma'
+    }
     ],
     // iceTransportPolicy: 'relay'
 };
@@ -101,16 +101,16 @@ var stream2 = null;
 var stream3 = null;
 
 mute0.onclick = () =>{
-    media0.muted=true;
+    media0.muted=!media0.muted;
 }
 mute1.onclick = () =>{
-    media1.muted=true;
+    media1.muted=!media1.muted;
 }
 mute2.onclick = () =>{
-    media2.muted=true;
+    media2.muted=!media2.muted;
 }
 mute3.onclick = () =>{
-    media3.muted=true;
+    media3.muted=media3.muted;
 }
 
 text_in.onkeydown = () => {
@@ -155,6 +155,17 @@ socket = new WebSocket("wss://webrtc.kyso.dev/rtc");
 socket.onopen = async function(){
     console.log(room_key);
     socket.send(room_key);
+    navigator.mediaDevices.getUserMedia({video: true, audio: true})
+            .then(stream => {
+                stream0 = stream;
+                users.user0.stream = stream;
+                media0.srcObject = stream0;
+                //Notify the server we're ready to accept any and all peers
+                socket.send(JSON.stringify({method: "ready"}));
+                ready = true;
+            }).catch(function(e){
+                console.log(e);
+            });
 }
 
 var users = {
@@ -207,6 +218,7 @@ function on_negotiation_request(id){
     //When we receive an ice candidate, we want to send it to the requesting user
     peer.onicecandidate = event => {
         if(event.candidate){
+            check_gathered(peer);
             socket.send(JSON.stringify({src_uuid: users.user0.uuid, dest_uuid: id, method: "candidate", candidate: event.candidate}));
         }
     };
@@ -229,6 +241,22 @@ function on_negotiation_request(id){
             );
         });
     };
+}
+
+function sleep(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function check_gathered(peer){
+    while(true){
+        console.log("gathering");
+        if(peer.iceGatheringState === 'complete'){
+            break;
+        }
+        else{
+            await sleep(500);
+        }
+    }
 }
 
 function on_offer(data){
@@ -265,6 +293,7 @@ function on_offer(data){
 
     peer.onicecandidate = event => {
         if(event.candidate){
+            check_gathered(peer);
             socket.send(JSON.stringify({src_uuid: users.user0.uuid, dest_uuid: data.uuid, method: "candidate", candidate: event.candidate}));
         }
     };
@@ -296,10 +325,64 @@ function on_offer(data){
         () => {}
     );
 }
-
+function fix_cameras(){
+    if(users.user1){
+        users.user1.media_obj = media1;
+        media1.srcObject = users.user1.stream;
+    }
+    else{
+        disable_card(2);
+    }
+    if(users.user2){
+        users.user2.media_obj = media2;
+        media2.srcObject = users.user2.stream;
+    }
+    else{
+        disable_card(3);
+    }
+    if(users.user3){
+        users.user3.media_obj = media3;
+        media3.srcObject = users.user3.stream;
+    }
+    else{
+        disable_card(4);
+    }
+}
 //Remove the peer connection object and hide their webcam
-async function on_peer_disconnect(){
+function on_peer_disconnect(data){
+    console.log("Peer disconnected");
+    console.log(data);
+    users.connected-=1;
+    for(var user in users){
+        if(users[user].uuid==data.uuid){
+            console.log("Found user");
+            users[user].connection.close();
+            delete users[user];
+            //We need to shift the cameras around
+            switch(user){
+                case "user1":
+                    if(users.user3){
+                        users.user1 = users.user3;
+                        delete users.user3;
+                    }
+                    else if(users.user2){
+                        users.user1 = users.user2;
+                        delete users.user2;
+                    }
+                    break;
+                case "user2":
+                    if(users.user3){
+                        users.user2 = users.user3;
+                        delete users.user3;
+                    }
+                    break;
+            }
+            fix_cameras();
 
+
+            break;
+        }
+    }
 }
 
 var ready = false;
@@ -324,17 +407,6 @@ function on_answer(data){
    }
 }
 
-navigator.mediaDevices.getUserMedia({video: true, audio: true})
-         .then(stream => {
-             stream0 = stream;
-             users.user0.stream = stream;
-             media0.srcObject = stream0;
-             //Notify the server we're ready to accept any and all peers
-             socket.send(JSON.stringify({method: "ready"}));
-             ready = true;
-         }).catch(function(e){
-             console.log(e);
-         });
 
 socket.onmessage = async function (event){
     var data = JSON.parse(event.data);
@@ -360,6 +432,9 @@ socket.onmessage = async function (event){
             on_candidate(data);
             break;
 
+        case "peer_disconnect":
+            on_peer_disconnect(data);
+            break;
     }
 }
 
