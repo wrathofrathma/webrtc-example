@@ -1,0 +1,26 @@
+* PROJ WebRTC Demo
+** DONE Pick a CSS framework
+CLOSED: [2020-05-04 Mon 15:35]
+** DONE Main Index Page
+CLOSED: [2020-05-04 Mon 21:25]
+*** [X] User Count
+CLOSED: [2020-05-04 Mon 18:37]
+*** [X] Banner
+CLOSED: [2020-05-04 Mon 18:02]
+*** [X] Room list & Capacity
+CLOSED: [2020-05-04 Mon 21:25]
+*** [X] Create new room button
+CLOSED: [2020-05-04 Mon 18:02]
+*** [X] Join random room
+CLOSED: [2020-05-04 Mon 18:02]
+*** [X] Connect to websockets
+CLOSED: [2020-05-04 Mon 18:47]
+** TODO Room Page
+** TODO Websocket Chat
+** TODO 2<user webcamming
+** TODO Audio
+** TODO Selectively mute&turn off camera
+** TODO Session Description Viewing
+** TODO Live transmission stats
+** DONE Random room
+CLOSED: [2020-05-04 Mon 21:25]
