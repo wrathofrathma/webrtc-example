@@ -7,21 +7,11 @@ function get_room_key(){
 }
 const room_key = get_room_key();
 
-// // Elements
-// var user1_name = document.querySelector("#user1-name");
-// var user2_name = document.querySelector("#user2-name");
-// var user1_video = document.querySelector("#user1-webcam");
-// var user2_video = document.querySelector("#user2-webcam");
-
 // // What kind of stream tracks to send
 var stream_types= {
     video: true,
     audio: true
 };
-
-// //Streams
-// var local_stream = null;
-// var remote_stream = null;
 
 // // WebRTC Peer configuration
 const ice_config = {
@@ -101,16 +91,47 @@ var stream2 = null;
 var stream3 = null;
 
 mute0.onclick = () =>{
-    stream0.getAudioTracks()[0].enabled = !stream0.getAudioTracks()[0].enabled;
+    if(stream0.getAudioTracks()[0].enabled){
+        stream0.getAudioTracks()[0].enabled = false;
+        mute0.className = "button is-danger";
+    }
+    else{
+        stream0.getAudioTracks()[0].enabled = true;
+        mute0.className = "button is-primary";
+    }
 }
 mute1.onclick = () =>{
-    media1.muted=!media1.muted;
+    if(media1.muted){
+        media1.muted=false;
+        mute1.className = "button is-primary";
+
+    }
+    else{
+        media1.muted=true;
+        mute1.className = "button is-danger";
+    }
 }
 mute2.onclick = () =>{
-    media2.muted=!media2.muted;
+    if(media2.muted){
+        media2.muted=false;
+        mute2.className = "button is-primary";
+
+    }
+    else{
+        media2.muted=true;
+        mute2.className = "button is-danger";
+    }
 }
 mute3.onclick = () =>{
-    media3.muted=media3.muted;
+    if(media3.muted){
+        media3.muted=false;
+        mute3.className = "button is-primary";
+
+    }
+    else{
+        media3.muted=true;
+        mute3.className = "button is-danger";
+    }
 }
 
 text_in.onkeydown = () => {
@@ -120,7 +141,6 @@ text_in.onkeydown = () => {
             //donothing
         }
         else{
-            //TODO - Fix these values
             var message = {
                 method: "message",
                 room: room_key,
