@@ -17,8 +17,16 @@ CLOSED: [2020-05-04 Mon 18:02]
 CLOSED: [2020-05-04 Mon 18:47]
 ** DONE Room Page
 CLOSED: [2020-05-04 Mon 23:08]
-** TODO Websocket Chat
-** TODO 2<user webcamming
+** DONE Websocket Chat
+CLOSED: [2020-05-05 Tue 06:23]
+** DONE Websocket chat username
+CLOSED: [2020-05-05 Tue 09:04]
+** DONE Random room going to currently existing room if there exists an open one
+CLOSED: [2020-05-05 Tue 06:50]
+** DONE 2<user webcamming
+CLOSED: [2020-05-05 Tue 09:16]
+** DONE Fix user count updating locally
+CLOSED: [2020-05-05 Tue 09:04]
 ** DONE Audio
 CLOSED: [2020-05-04 Mon 23:08]
 ** DONE Selectively mute&turn off camera

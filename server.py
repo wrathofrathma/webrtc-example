@@ -14,20 +14,6 @@ from sanic.response import redirect, text
 
 from rtc import *
 
-# Peers connected to the main index
-index_peers = {}
-
-async def push_room_update():
-    """Pushes the updated room list info to all users on the index.
-    """
-    for user,ws in index_peers.items():
-        await send_rooms(ws)
-
-async def send_rooms(ws):
-    """Pushes updated room list to a specific user
-    """
-    payload = { "method": "room_update", "rooms": rooms }
-    await ws.send(json.dumps(payload))
 
 def create_room(params, rid=None):
     """Creates a chat room given some parameters
@@ -88,32 +74,15 @@ async def ws_rtc(request, websocket):
                         "uuid": user,
                         "username": user}
     recv = await websocket.recv() # First response is the uuid of the room they join
+    await websocket.send(json.dumps({"method": "id", "uuid": user}))
 
     rooms[recv]["user_count"]+=1
     rooms[recv]["avail"]-=1
-
+    rooms[recv]["users"]+=[user]
+    print(rooms[recv]["users"])
     await update_connected_index()
     await push_room_update()
-    asyncio.ensure_future(rtc_handler(user, websocket))
-
-
-# @app.websocket('/sock')
-# async def on_connect(request, websocket):
-#     """This method is run when the users connect to the websocket server. It adds them to the connected dictionary & starts their event loop"""
-#     user = str(uuid4())
-#     print("Peer connected {:s}".format(str(user)))
-#     peers[user] = {"socket": websocket}
-
-#     recv = await websocket.recv() # Initial ready check
-#     # Send the user their ID
-#     await websocket.send(json.dumps({"uuid": user, "method": "id", "connected": len(rtc_peers)}))
-
-#     if(len(rtc_peers)==2):
-#         # If two peers are connected, then let's tell the second peer to initiate contact
-#         req = { "uuid": get_other_peer(user), "method": "init"}
-#         await websocket.send(json.dumps(req))
-
-#     await asyncio.ensure_future(peer_listener(user, websocket))
+    await asyncio.ensure_future(rtc_handler(user, websocket, recv))
 
 
 @app.route('/getroom/<key>')
@@ -146,6 +115,12 @@ async def serve_create_room(request):
 @app.route('/rand')
 async def serve_rand_room(request):
     rid = str(uuid4())
+    for key,room in rooms.items():
+        if(room["avail"] > 0):
+            # Join this room
+
+            return redirect(room["url"])
+
     url = create_room({"room_name": rid, "participants": ["2"]}, rid)
     return redirect(url)
 

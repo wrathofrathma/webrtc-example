@@ -1,4 +1,3 @@
-
 function get_room_key(){
     var url = window.location.href;
     var base = "https://webrtc.kyso.dev/room/";
@@ -14,89 +13,40 @@ const room_key = get_room_key();
 // var user1_video = document.querySelector("#user1-webcam");
 // var user2_video = document.querySelector("#user2-webcam");
 
-// // Signaling stuff
-// var uuid1 = null;
-// var uuid2 = null;
-
 // // What kind of stream tracks to send
-// var stream_types= {
-//     video: true,
-//     audio: false
-// };
+var stream_types= {
+    video: true,
+    audio: true
+};
 
 // //Streams
 // var local_stream = null;
 // var remote_stream = null;
 
 // // WebRTC Peer configuration
-// const config = {
-//     sdpSemantics: 'unified-plan',
-//     iceServers: [
-//         {
-//             urls: ['stun:stun.l.google.com:19302']
-//         },
-//         // {
-//         //     urls: ['turn:3.23.105.166:3478'],
-//         //     credential: 'hpv',
-//         //     username: 'rathma'
-//     // }
+const ice_config = {
+    sdpSemantics: 'unified-plan',
+    iceServers: [
+        {
+            urls: ['stun:stun.l.google.com:19302']
+        }
+    //     {
+    //         urls: ['turn:3.23.105.166:3478'],
+    //         credential: 'hpv',
+    //         username: 'rathma'
+    // }
+    ],
+    // iceTransportPolicy: 'relay'
+};
 
-//     ],
-//     // iceTransportPolicy: 'relay'
-// };
+async function on_success(){
 
-// async function on_success(){
+}
 
-// }
+async function on_error(error){
+    console.error(error);
+}
 
-// async function on_error(error){
-//     console.error(error);
-// }
-
-// //WebRTC state callbacks
-// async function onIceCandidate(pc, event){
-//     //If we receive a candidate, we want to maybe notify the other client
-//     console.log("Received ice candidate");
-//     console.log(event.candidate);
-//     socket.send({uuid: uuid2, method: "candidate", candidate: event.candidate})
-// }
-
-// var peer;
-
-// function create_peer_connection(create_offer){
-//     //Creates the peer connection and related callbacks and starts the negotiation
-//     peer = new RTCPeerConnection(config);
-
-//     peer.onicecandidate = event => {
-//         if(event.candidate){
-//             socket.send(JSON.stringify({uuid: uuid2, method: "candidate", candidate: event.candidate}));
-//         }
-//     };
-
-//     peer.ontrack = event => {
-//         console.log("Adding remote media tracks");
-//         remote_stream = event.streams[0];
-//         user2_video.srcObject = remote_stream;
-//     };
-
-//     // We know local_stream exists since it triggers the webrtc initialization
-//     local_stream.getTracks().forEach(track => peer.addTrack(track, local_stream));
-//     console.log("Added local media tracks to peer connection");
-
-//     //If we are the first user we need to generate the offers
-//     if(create_offer){
-//         peer.onnegotiationneeded = () => {
-//             console.log(peer);
-//             peer.createOffer().then(desc => {
-//                 peer.setLocalDescription(
-//                     desc,
-//                     () => socket.send(JSON.stringify({uuid: uuid2, method: "offer", sdp: peer.localDescription})),
-//                     () => {}
-//                 );
-//             });
-//         };
-//     }
-// }
 
 function enable_card(n){
     //Enables the nth user 2-4
@@ -137,6 +87,7 @@ function disable_card(n){
 var text_in = document.querySelector("#text-input");
 var messages = document.querySelector("#messages");
 var media0 = document.querySelector("#user-webcam");
+media0.muted = true;
 var media1 = document.querySelector("#user2-webcam")
 var media2 = document.querySelector("#user3-webcam")
 var media3 = document.querySelector("#user4-webcam")
@@ -144,6 +95,10 @@ var mute0 = document.querySelector("#mute");
 var mute1 = document.querySelector("#mute2");
 var mute2 = document.querySelector("#mute3");
 var mute3 = document.querySelector("#mute4");
+var stream0 = null;
+var stream1 = null;
+var stream2 = null;
+var stream3 = null;
 
 mute0.onclick = () =>{
     media0.muted=true;
@@ -167,9 +122,8 @@ text_in.onkeydown = () => {
         else{
             //TODO - Fix these values
             var message = {
-                uuid: "Fake ID",
                 method: "message",
-                room: "Fake uuid",
+                room: room_key,
                 content: val
                           };
             socket.send(JSON.stringify(message));
@@ -181,24 +135,20 @@ text_in.onkeydown = () => {
 function on_message(message){
     messages.innerHTML += `
 <div class="columns">
-<div class="column is-1">
+<div class="column is-narrow">
 <strong>` + message.username +  ` </strong>
 </div>
-<div class="column is-11">` + message.content +
+<div class="column is-expanded">` + message.content +
     `
 </div>
 </div>
 `
+    messages.scrollTop = messages.scrollHeight;
 }
-
-on_message({username: "Rathma", content: "Hello world!"});
 
 function mutebtn(){
     webcam.muted=true;
 }
-navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream => {
-    media0.srcObject = stream;
-});
 
 socket = new WebSocket("wss://webrtc.kyso.dev/rtc");
 
@@ -207,10 +157,209 @@ socket.onopen = async function(){
     socket.send(room_key);
 }
 
-socket.onmessage = async function (event){
+var users = {
+    connected: 0,
+    user0: {
+        uuid: null,
+        stream: null,
+        muted: false,
+        media_obj: media0
+    },
+};
 
+//Set our primary user's uuid
+function on_identify(id){
+    users.user0.uuid=id;
+    document.querySelector("#username").innerHTML = id;
+}
+
+
+// Set up a new PeerConnection object & offer
+function on_negotiation_request(id){
+    users.connected+=1;
+    var user = {
+        uuid: id,
+        muted: false,
+        stream: null,
+        media_obj: null,
+        connection: null
+    };
+    switch(users.connected){
+        case 1:
+            users.user1 = user;
+            user.media_obj = media1;
+            enable_card(2);
+            break;
+        case 2:
+            users.user2 = user;
+            user.media_obj = media2;
+            enable_card(3);
+            break;
+        case 3:
+            users.user3 = user;
+            user.media_obj = media3;
+            enable_card(4);
+            break;
+    }
+    peer = new RTCPeerConnection(ice_config);
+    user.connection = peer;
+
+    //When we receive an ice candidate, we want to send it to the requesting user
+    peer.onicecandidate = event => {
+        if(event.candidate){
+            socket.send(JSON.stringify({src_uuid: users.user0.uuid, dest_uuid: id, method: "candidate", candidate: event.candidate}));
+        }
+    };
+
+    peer.ontrack = event => {
+        console.log("Adding remote media tracks");
+        user.stream = event.streams[0];
+        user.media_obj.srcObject = user.stream;
+    };
+
+    users.user0.stream.getTracks().forEach(track => peer.addTrack(track, users.user0.stream));
+
+    peer.onnegotiationneeded = () => {
+        console.log("Beginning negotiation");
+        peer.createOffer().then(desc => {
+            peer.setLocalDescription(
+                desc,
+                () => socket.send(JSON.stringify({src_uuid: users.user0.uuid, dest_uuid: id, method: "offer", sdp: peer.localDescription})),
+                () => {}
+            );
+        });
+    };
+}
+
+function on_offer(data){
+    console.log("Received offer");
+    var id = data.uuid;
+    users.connected+=1;
+    var user = {
+        uuid: id,
+        muted: false,
+        stream: null,
+        media_obj: null,
+        connection: null
+    };
+
+    switch(users.connected){
+        case 1:
+            users.user1 = user;
+            user.media_obj = media1;
+            enable_card(2);
+            break;
+        case 2:
+            users.user2 = user;
+            user.media_obj = media2;
+            enable_card(3);
+            break;
+        case 3:
+            users.user3 = user;
+            user.media_obj = media3;
+            enable_card(4);
+            break;
+    }
+    peer = new RTCPeerConnection(ice_config);
+    user.connection = peer;
+
+    peer.onicecandidate = event => {
+        if(event.candidate){
+            socket.send(JSON.stringify({src_uuid: users.user0.uuid, dest_uuid: data.uuid, method: "candidate", candidate: event.candidate}));
+        }
+    };
+
+    peer.ontrack = event => {
+        console.log("Adding remote media tracks");
+        user.stream = event.streams[0];
+        user.media_obj.srcObject = user.stream;
+    };
+
+    users.user0.stream.getTracks().forEach(track => peer.addTrack(track, users.user0.stream));
+
+    peer.setRemoteDescription(
+        new RTCSessionDescription(data.sdp),
+        () => {
+            peer.createAnswer()
+                .then(desc => {
+                    peer.setLocalDescription(
+                        desc,
+                        () => socket.send(JSON.stringify({
+                            src_uuid: users.user0.uuid,
+                            dest_uuid: id,
+                            method: "answer",
+                            sdp: peer.localDescription})),
+                        () => {}
+                    );
+                });
+        },
+        () => {}
+    );
+}
+
+//Remove the peer connection object and hide their webcam
+async function on_peer_disconnect(){
+
+}
+
+var ready = false;
+
+function on_candidate(data){
+    console.log("Attempting to add candidate");
+   for(var u in users){
+       if(users[u].uuid==data.uuid){
+           console.log("Adding candidate");
+           users[u].connection.addIceCandidate(new RTCIceCandidate(data.candidate), on_success, on_error);
+       }
+   }
+}
+
+function on_answer(data){
+    console.log("On answer");
+   for(var u in users){
+       if(users[u].uuid==data.uuid){
+           console.log("Adding answer to from ", users[u].uuid);
+           users[u].connection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+       }
+   }
+}
+
+navigator.mediaDevices.getUserMedia({video: true, audio: true})
+         .then(stream => {
+             stream0 = stream;
+             users.user0.stream = stream;
+             media0.srcObject = stream0;
+             //Notify the server we're ready to accept any and all peers
+             socket.send(JSON.stringify({method: "ready"}));
+             ready = true;
+         }).catch(function(e){
+             console.log(e);
+         });
+
+socket.onmessage = async function (event){
     var data = JSON.parse(event.data);
+    console.log(data);
     switch(data.method){
+        case "message":
+            on_message(data);
+            break;
+        case "id":
+            //Received an ID from the server
+            on_identify(data.uuid);
+            break;
+        case "negotiation_request":
+            await on_negotiation_request(data.uuid);
+            break;
+        case "offer":
+            on_offer(data);
+            break;
+        case "answer":
+            on_answer(data);
+            break;
+        case "candidate":
+            on_candidate(data);
+            break;
+
     }
 }
 
@@ -221,63 +370,3 @@ socket.onclose = async function (){
 socket.onerror = (e) => {
     console.log(e);
 }
-
-
-// //Since the signaling server is kind of dumb right now, we're going to tell it we're ready for webrtc stuff after we select our media.
-// navigator.mediaDevices.getUserMedia(stream_types)
-//          .then( stream => {
-//              //Save the streams to set on the peer later & set local video player.
-//              local_stream = stream;
-//              user1_video.srcObject = local_stream;
-
-//              //Tell signaling server we're ready.
-//              socket.send(JSON.stringify({method: "ready"}));
-//           })
-//           .catch(function (e) {
-//               console.log("We broke something");
-//           });
-
-
-// socket.onmessage = async function (event) {
-//     console.log(event.data);
-//     var data = JSON.parse(event.data);
-//     switch(data.method){
-//         case "id":
-//             uuid1 = data.uuid;
-//             user1_name.innerHTML = uuid1;
-//             break;
-//         case "init":
-//             console.log("Received initialization command");
-//             uuid2 = data.uuid;
-//             user2_name.innerHTML = uuid2;
-//             create_peer_connection(true);
-//             break;
-//         case "offer":
-//             console.log("received offer");
-//             uuid2 = data.uuid;
-//             user2_name.innerHTML = uuid2;
-//             create_peer_connection(false);
-//             peer.setRemoteDescription(
-//                 new RTCSessionDescription(data.sdp),
-//                 () => {
-//                   peer.createAnswer()
-//                       .then(desc => {
-//                           peer.setLocalDescription(
-//                               desc,
-//                               () => socket.send(JSON.stringify({uuid: uuid2, method: "answer", sdp: peer.localDescription})),
-//                               () => {}
-//                           );
-//                       });
-//                 },
-//                 () => {}
-//             );
-//             break;
-//         case "answer":
-//             console.log("received answer");
-//             peer.setRemoteDescription(new RTCSessionDescription(data.sdp));
-//             break;
-//         case "candidate":
-//             peer.addIceCandidate(new RTCIceCandidate(data.candidate), on_success, on_error);
-//             break;
-//     }
-// }

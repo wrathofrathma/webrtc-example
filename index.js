@@ -111,6 +111,7 @@ socket.onmessage = async function (event) {
     var data = JSON.parse(event.data);
     switch(data.method){
         case "room_update":
+            console.log("Room update");
             update_rooms(data.rooms);
             break;
         case "connected_update":

@@ -11,18 +11,91 @@ rtc_peers = {}
 rooms = {}
 room_names = {}
 
+# Peers connected to the main index
+index_peers = {}
 
-async def rtc_handler(user, socket):
+
+async def send_rooms(ws):
+    """Pushes updated room list to a specific user
+    """
+    payload = { "method": "room_update", "rooms": rooms }
+    await ws.send(json.dumps(payload))
+
+async def push_room_update():
+    """Pushes the updated room list info to all users on the index.
+    """
+    for user,ws in index_peers.items():
+        await send_rooms(ws)
+
+async def on_message(message):
+    # Username room name uuid content
+    print(message)
+    for user in rooms[message["room"]]["users"]:
+        await rtc_peers[user]["socket"].send(json.dumps(message))
+
+async def init_negotiations(user_id, room_key):
+    """Initializes the negotiations with every user in the room when a user is ready."""
+    for user in rooms[room_key]["users"]:
+        if user != user_id:
+            print("Initializing connection between %s & %s" % (user_id, user))
+            await rtc_peers[user]["socket"].send(json.dumps({
+                "method": "negotiation_request",
+                "uuid": user_id
+            }))
+
+async def rtc_handler(user, socket, room_key):
     """Handles the websocket connection for RTC chat users
     """
-    pass
+   
+    while(socket.open):
+        try:
+            recv = json.loads(await socket.recv())
+            method = recv["method"]
+            if(method=="message"):
+                recv["username"] = user
+                await on_message(recv)
+            elif(method=="ready"):
+                # User has setup their webcam, begin negotiations with their peers in the room
+                await init_negotiations(user, room_key)
+
+            elif(method=="offer"):
+                print("received offer")
+                await rtc_peers[recv["dest_uuid"]]["socket"].send(json.dumps({
+                    "uuid": user,
+                    "method": "offer",
+                    "sdp": recv["sdp"]
+                }))
+            elif(method=="answer"):
+                await rtc_peers[recv["dest_uuid"]]["socket"].send(json.dumps({
+                    "uuid": user,
+                    "method": "answer",
+                    "sdp": recv["sdp"]
+                }))
+            elif(method=="candidate"):
+                await rtc_peers[recv["dest_uuid"]]["socket"].send(json.dumps({
+                    "uuid": user,
+                    "method": "candidate",
+                    "candidate": recv["candidate"]
+                }))
+
+        except:
+            await on_disconnect(user)
 
 async def on_disconnect(user):
     print("Connection closed - removing user")
     rtc_peers.pop(user)
-    for room in rooms:
+    to_rm = []
+    for key,room in rooms.items():
         if user in room["users"]:
-            room["users"].pop(user)
+            room["users"].remove(user)
+            room["avail"]+=1
+            room["user_count"]-=1
+            if(room["user_count"]==0):
+                to_rm.append(key)
+    for r in to_rm:
+        rooms.pop(r)
+    print(rooms)
+    await push_room_update()
 
 
 async def peer_listener(user, socket):
