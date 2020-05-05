@@ -101,7 +101,7 @@ var stream2 = null;
 var stream3 = null;
 
 mute0.onclick = () =>{
-    media0.muted=!media0.muted;
+    stream0.getAudioTracks()[0].enabled = !stream0.getAudioTracks()[0].enabled;
 }
 mute1.onclick = () =>{
     media1.muted=!media1.muted;
