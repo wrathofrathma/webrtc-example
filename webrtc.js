@@ -281,6 +281,7 @@ async function check_gathered(peer){
 
 function on_offer(data){
     console.log("Received offer");
+    console.log(data.sdp);
     var id = data.uuid;
     users.connected+=1;
     var user = {
@@ -408,10 +409,10 @@ function on_peer_disconnect(data){
 var ready = false;
 
 function on_candidate(data){
-    console.log("Attempting to add candidate");
    for(var u in users){
        if(users[u].uuid==data.uuid){
-           console.log("Adding candidate");
+           console.log("Adding candidate ");
+           console.log(data.candidate);
            users[u].connection.addIceCandidate(new RTCIceCandidate(data.candidate), on_success, on_error);
        }
    }
@@ -421,7 +422,8 @@ function on_answer(data){
     console.log("On answer");
    for(var u in users){
        if(users[u].uuid==data.uuid){
-           console.log("Adding answer to from ", users[u].uuid);
+           console.log("Adding answer sdp to from ", users[u].uuid);
+           console.log(data.sdp);
            users[u].connection.setRemoteDescription(new RTCSessionDescription(data.sdp));
        }
    }

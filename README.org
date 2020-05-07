@@ -1,0 +1,36 @@
+#+TITLE: Readme
+
+* Table of Contents :TOC:
+- [[#about][About]]
+- [[#technologies-used][Technologies used]]
+  - [[#python][Python]]
+  - [[#sanic---asynchronous-python-based-web-framework-for-hosting-web-pages--websockets][Sanic - Asynchronous python-based web framework for hosting web pages & websockets]]
+  - [[#html5cssjavascript][HTML5/CSS/Javascript]]
+  - [[#webrtc--websockets][WebRTC & WebSockets]]
+- [[#file-index][File Index]]
+  - [[#python-files][Python files]]
+  - [[#javascript][Javascript]]
+  - [[#html-files][HTML files]]
+  - [[#css-files][CSS Files]]
+
+* About
+This project is a functional implementation of WebRTC based VoIP communication.
+
+* Technologies used
+** Python
+** Sanic - Asynchronous python-based web framework for hosting web pages & websockets
+** HTML5/CSS/Javascript
+** WebRTC & WebSockets
+
+* File Index
+** Python files
+*** server.py - Web server code for handling rooms and serving web pages
+*** rtc.py - Handles routing peer negotiations & message routing to individual users.
+** Javascript
+*** index.js - Handles updating UI elements such as the available rooms & user count, and doing input validation via WebSockets & AJAX requests.
+*** webrtc.js - Uses WebSockets to connect the signaling server & WebRTC/ICE to get remote peer's media streams and connect them to the video players.
+** HTML files
+*** index.html - Index landing page where users can join rooms
+*** room.html - Page containing user webcam room sessions
+** CSS Files
+*** style.css - Horizontally mirros the video in the room and makes the text chat scrollable.
